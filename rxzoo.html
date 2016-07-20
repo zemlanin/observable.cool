@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rx Zoo</title>
+  <link rel="stylesheet" href="https://npmcdn.com/hack@0.5.1">
+</head>
+<body>
+  <div id="one"></div>
+  <form id="args">
+    input$ = <input id='inputStreamValue' name='inputStreamValue' placeholder="input stream" value="Rx.Observable.timer(0, 300)" size="40" /><br />
+    transformation$ = <input id='transformation' name='transformation' placeholder="transformation" value="input$.filter(function (v) { return v % 2 })" size="40" /><br />
+    <input type="submit" />
+  </form>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/4.1.0/rx.all.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/react/15.2.1/react.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/react/15.2.1/react-dom.min.js"></script>
+
+  <script type="text/javascript">
+    (function () {
+      const h = React.createElement
+
+      var disposable = {dispose: function () {}}
+      var input$ = Rx.Observable.empty()
+      var input$prepared = Rx.Observable.empty()
+      var input$reduced = Rx.Observable.empty()
+
+      var prevInput = ''
+      var prevTransform = ''
+
+      function updateSVG () {
+        const nextInput = document.getElementById('inputStreamValue').value
+        const nextTransform = document.getElementById('transformation').value
+
+        if (prevInput == nextInput && prevTransform == nextTransform) {
+          return
+        }
+
+        if (prevInput != nextInput) {
+          prevInput = nextInput
+          input$ = eval(nextInput)
+          input$prepared = input$.map(function (v, i) {
+            return {v: v, i: i, c: ['black', 'red', 'blue', 'green'][i % 4]}
+          }).share()
+          input$reduced = input$prepared.scan(function (acc, v) {
+            acc.push(v)
+            return acc.filter(function (av) { return 9 >= v.i - av.i })
+          }, []).share()
+        }
+
+        prevTransform = nextTransform
+        const transformed$ = eval(nextTransform)
+        const transformed$prepared = transformed$
+          .withLatestFrom(input$prepared, function (tv, iv) {
+            return {c: iv.c, i: iv.i, v: tv}
+          })
+        const transformed$reduced = transformed$prepared.scan(function (acc, v) {
+          acc.push(v)
+          return acc.filter(function (av) { return 9 >= v.i - av.i })
+        }, []);
+
+        const newDisposable = input$reduced
+          .withLatestFrom(transformed$reduced, function (i, t) { return {i: i, t: t} })
+          .subscribe(function (values) {
+            const inputs = values.i
+            const transformed = values.t
+            const latestInput = inputs[0]
+
+            ReactDOM.render(
+              h('svg', {},
+                h('line'),
+                inputs.map(function (v, i) {
+                  return h('circle', {cx: 15 + (v.i - latestInput.i) * 30, cy: 30, r: 15, fill: v.c})
+                }),
+                transformed.map(function (v, i) {
+                  return h('circle', {cx: 15 + (v.i - latestInput.i) * 30, cy: 60, r: 15, fill: v.c})
+                }),
+                inputs.map(function (v, i) {
+                  return h('text', {x: 5 + (v.i - latestInput.i) * 30, y: 35, fill: 'white'}, v.v)
+                }),
+                transformed.map(function (v, i) {
+                  return h('text', {x: 5 + (v.i - latestInput.i) * 30, y: 65, fill: 'white'}, v.v)
+                })
+              ),
+              document.getElementById('one')
+            )
+          })
+
+        disposable.dispose()
+        disposable = newDisposable
+      }
+
+      document.getElementById('args').onsubmit = function (e) {
+        e.preventDefault()
+        updateSVG()
+      }
+    })();
+  </script>
+</body>
+</html>
