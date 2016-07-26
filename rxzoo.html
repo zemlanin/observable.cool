@@ -13,11 +13,12 @@
     .timeline { animation: timeline-flow linear 1s infinite; }
 
     @keyframes event-flow {
-      from { transform: translateX(0) }
-      to { transform: translateX(-960px) }
+      /* initial render outside viewbox because of blinking in #blink browsers */
+      from { transform: translateX(-100px) }
+      to { transform: translateX(-932px) }
     }
 
-    .event-enter, .event-appear { animation: event-flow linear 15s; }
+    .event-enter, .event-appear { animation: event-flow linear 13s; }
 
     #one { width: 100vw; max-width: 800px; }
 
@@ -25,9 +26,10 @@
       animation-play-state: paused;
     }
 
-    #play-pause { font-size: 5em }
+    #play-pause { font-size: 3em }
     #play-pause.pause::after { content: "⏸" }
     #play-pause.play::after { content: "▶️" }
+    input { font-family: Menlo, Monaco, "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace, serif }
   </style>
 </head>
 <body>
@@ -55,6 +57,10 @@
         <span style="color: green">green$ =</span>
         <input id='green$' type="text" size="40" />
       </div>
+      <div>
+        <span style="color: purple">purple$ =</span>
+        <input id='purple$' type="text" size="40" />
+      </div>
     </div>
     <input type="submit" />
   </form>
@@ -65,7 +71,7 @@
   <script type="text/javascript">
     (function () {
       const TEXT_COLORS = ['yellow', 'pink', 'orange', 'gray']
-      const STREAM_COLORS = ['gray', 'black', 'red', 'blue', 'green']
+      const STREAM_COLORS = ['gray', 'black', 'red', 'blue', 'green', 'purple']
       const STREAM_VALUES = [
         'red$.map(function(v, i) { return i } )',
         'red$.debounce(1500)',
@@ -80,22 +86,57 @@
 
       var disposable = {dispose: function () {}}
 
-      function mapToDisplay (v, i) { return {v: v, t: (new Date).getTime()} }
-      function inputValue (v) { return v.value }
-      function argsToArray () { return Array.from(arguments) }
-      function startWithNull (s) { return s.startWith(null) }
+      function markWithTimestamp (v) { return {v: v, t: (new Date).getTime()} }
+      function wrapToDisplay (s, i, arr) {
+        const length = arr.length
+        return s.timestamp().map(function (v) {
+          const mappedArray = Array.from({length: length})
+          mappedArray[i] = v
+          return mappedArray
+        })
+      }
       function setAnimation (newPlayStatus) { pauseUpdate$.onNext(newPlayStatus) }
-      function timerStream (v) { return Rx.Observable.timer(14000).map(null).startWith(v) }
+      function renderValueGroup (v, i, svgWidth) {
+        return h(
+          React.addons.CSSTransitionGroup,
+          {
+            transitionName: 'event',
+            transitionAppear: true,
+            transitionAppearTimeout: 0,
+            transitionEnterTimeout: 0,
+            transitionLeaveTimeout: 1,
+            component: 'g',
+            key: i,
+            className: 'event',
+          },
+          v && h(
+            'g',
+            {key: `${v.value}.${v.timestamp}`},
+            h('circle', {
+              // initial render outside viewbox because of blinking in #blink browsers
+              cx: svgWidth + 60,
+              cy: 50 + i * 50,
+              fill: STREAM_COLORS[i],
+              r: 16,
+            }),
+            h('text', {
+              // initial render outside viewbox because of blinking in #blink browsers
+              x: svgWidth + 60,
+              y: 50 + i * 50,
+              fill: 'white',
+              textAnchor: 'middle',
+              dominantBaseline: 'central',
+            }, v.value)
+          )
+        )
+      }
 
       const click$ = (
         Rx.Observable.fromEvent(document.getElementById('click$button'), 'click')
         .map('ok')
-        .map(mapToDisplay)
-        .flatMapLatest(timerStream)
       )
 
       function updateSVG () {
-        const textColor = 'white' // TEXT_COLORS[parseInt(Math.random() * TEXT_COLORS.length)]
         const static$ = [click$]
 
         const inputed$ = []
@@ -105,24 +146,46 @@
           if (input.value) {
             inputed$.push(
               eval(`var ${input.id} = ${input.value}; ${input.id}`)
-                .map(mapToDisplay)
-                .flatMapLatest(timerStream)
             )
             queryParams.push(`${input.id.replace('$', '')}=${encodeURIComponent(input.value)}`)
+          } else {
+            inputed$.push(
+              eval(`var ${input.id} = Rx.Observable.empty(); ${input.id}`)
+            )
           }
         }
 
         history.replaceState('', null, `?${queryParams.join('&')}`)
+        const svgHeight = (inputed$.length + 2) * 50
+        const ticksArray = Array.from({length: 27})
+        const getTimelineTicks = function getTimelineTicks(i, svgWidth) {
+          return [
+              h('line', {
+                x1: svgWidth - ((i - 2) * 32),
+                x2: svgWidth - ((i - 2) * 32),
+                y1: 0,
+                y2: i % 2 ? 20 : 10,
+                stroke: 'black',
+                key: `${i}top`,
+              }),
+              h('line', {
+                x1: svgWidth - ((i - 2) * 32),
+                x2: svgWidth - ((i - 2) * 32),
+                y1: svgHeight,
+                y2: i % 2 ? svgHeight - 20 : svgHeight - 10,
+                stroke: 'black',
+                key: `${i}bottom`,
+              })
+            ]
+        }
 
         disposable.dispose()
-        disposable = Rx.Observable.combineLatest(
-          static$.concat(inputed$).map(startWithNull),
-          argsToArray
+        disposable = Rx.Observable.merge(
+          static$.concat(inputed$).map(wrapToDisplay)
         )
           .withLatestFrom(pauseUpdate$.startWith(true), function(b, r) {return r && b})
           .filter(Boolean)
           .subscribe(function (values) {
-            const svgHeight = 50 + values.length * 50
             const svgWidth = document.getElementById('one').clientWidth
 
             ReactDOM.render(
@@ -133,54 +196,9 @@
                   viewBox: `0 0 ${svgWidth} ${svgHeight}`,
                 },
                 h('g', {className: 'timeline'},
-                  Array.from({length: parseInt(svgWidth / 32) + 2}, function (v, i) {
-                    return [
-                      h('line', {
-                        x1: svgWidth - ((i - 2) * 32),
-                        x2: svgWidth - ((i - 2) * 32),
-                        y1: 0,
-                        y2: i % 2 ? 20 : 10,
-                        stroke: 'black',
-                        key: `${i}top`,
-                      }),
-                      h('line', {
-                        x1: svgWidth - ((i - 2) * 32),
-                        x2: svgWidth - ((i - 2) * 32),
-                        y1: svgHeight,
-                        y2: i % 2 ? svgHeight - 20 : svgHeight - 10,
-                        stroke: 'black',
-                        key: `${i}bottom`,
-                      })
-                    ]
-                  })
+                  ticksArray.map(function(v, i) { return getTimelineTicks(i, svgWidth) })
                 ),
-                values.map(function (v, i) { return v && h(
-                  React.addons.CSSTransitionGroup,
-                  {
-                    transitionName: 'event',
-                    transitionAppear: true,
-                    transitionAppearTimeout: 0,
-                    transitionEnterTimeout: 0,
-                    transitionLeaveTimeout: 1,
-                    component: 'g',
-                    key: i,
-                  },
-                  h('g', {key: `${v.v}.${v.t}`},
-                    h('circle', {
-                      cx: svgWidth - 40,
-                      cy: 50 + i * 50,
-                      fill: STREAM_COLORS[i],
-                      r: 16,
-                    }),
-                    h('text', {
-                      x: svgWidth - 40,
-                      y: 50 + i * 50,
-                      fill: textColor,
-                      textAnchor: 'middle',
-                      dominantBaseline: 'central',
-                    }, v.v)
-                  ))
-                })
+                values.map(function(v, i) { return renderValueGroup(v, i, svgWidth) })
               ),
               document.getElementById('one')
             )
