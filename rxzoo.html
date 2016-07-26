@@ -17,23 +17,42 @@
     }
 
     .event-enter, .event-appear { animation: event-flow linear 10s; }
+
+    #one.paused .timeline, #one.paused .event-enter, #one.paused .event-appear {
+      animation-play-state: paused;
+    }
+
+    #play-pause { font-size: 5em }
+    #play-pause.pause::before { content: "⏸" }
+    #play-pause.play::before { content: "▶️" }
   </style>
 </head>
 <body>
   <a href="https://gist.github.com/zemlanin/ce68944400c26ca864fdcd256a86ad04">source</a>
   <div id="one"></div>
+  <div id="play-pause" class="pause"></div>
   <form id="args" action="javascript:void 0">
     <div id="fields">
       <div>
-        black$ =
+        <span style="color: gray">click$</span> = <input id="click$button" type="button" value="ok" />
+      </div>
+      <div>
+        <span style="color: black">black$ =</span>
         <input id='black$' type="text" value="Rx.Observable.timer(0, 1000)" size="40" />
       </div>
       <div>
-        red$ =
+        <span style="color: red">red$ =</span>
         <input id='red$' type="text" value="black$.filter(function(v) { return v % 3 })" size="40" />
       </div>
+      <div>
+        <span style="color: blue">blue$ =</span>
+        <input id='blue$' type="text" size="40" />
+      </div>
+      <div>
+        <span style="color: green">green$ =</span>
+        <input id='green$' type="text" size="40" />
+      </div>
     </div>
-    <input type="button" id="add" value="+" />
     <input type="submit" />
   </form>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/4.1.0/rx.all.min.js"></script>
@@ -43,39 +62,64 @@
   <script type="text/javascript">
     (function () {
       const TEXT_COLORS = ['yellow', 'pink', 'orange', 'gray']
-      const STREAM_COLORS = ['black', 'red', 'blue', 'green']
+      const STREAM_COLORS = ['gray', 'black', 'red', 'blue', 'green']
       const STREAM_VALUES = [
         'red$.map(function(v, i) { return i } )',
         'red$.debounce(1500)',
         'black$.take(3)',
         'black$.skip(3)',
         'black$.takeUntil(red$.skip(3))',
+
+        'click$.map(function(v, i){ return i % 2 }).startWith(true)',
+        'black$.controlled().stopAndWait(red$.filter(Boolean))',
+        'black$.pausable(red$)',
       ]
       const h = React.createElement
+      const pauseUpdate$ = new Rx.Subject()
 
       var disposable = {dispose: function () {}}
 
-      function mapToDisplay (v, i) { return {v: v, t: (new Date)} }
+      function mapToDisplay (v, i) { return {v: v, t: (new Date).getTime()} }
       function inputValue (v) { return v.value }
       function argsToArray () { return Array.from(arguments) }
+      function startWithNull (s) { return s.startWith(null) }
+      function setAnimation (newPlayStatus) { pauseUpdate$.onNext(newPlayStatus) }
+
+      const click$ = (
+        Rx.Observable.fromEvent(document.getElementById('click$button'), 'click')
+        .map('ok')
+        .map(mapToDisplay)
+      )
 
       function updateSVG () {
         const textColor = 'white' // TEXT_COLORS[parseInt(Math.random() * TEXT_COLORS.length)]
-        const reducedInput$ = []
+        const static$ = [click$]
+
+        const inputed$ = []
+        const queryParams = []
 
         for (var input of Array.from(document.querySelectorAll('input[id$="$"]'))) {
           if (input.value) {
-            reducedInput$.push(
-              eval(`var ${input.id} = ${input.value}; ${input.id}`).map(mapToDisplay).startWith(null)
+            inputed$.push(
+              eval(`var ${input.id} = ${input.value}; ${input.id}`)
+                .map(mapToDisplay)
             )
+            queryParams.push(`${input.id.replace('$', '')}=${encodeURIComponent(input.value)}`)
           }
         }
 
+        history.replaceState('', null, `?${queryParams.join('&')}`)
+
         disposable.dispose()
-        disposable = Rx.Observable.combineLatest(reducedInput$, argsToArray)
+        disposable = Rx.Observable.combineLatest(
+          static$.concat(inputed$).map(startWithNull),
+          argsToArray
+        )
+          .withLatestFrom(pauseUpdate$.startWith(true), function(b, r) {return r && b})
+          .filter(Boolean)
           .subscribe(function (values) {
             ReactDOM.render(
-              h('svg', {height: 30 + reducedInput$.length * 50},
+              h('svg', {height: 30 + values.length * 50},
                 h('g', {className: 'timeline'},
                   Array.from({length: 20}, function (v, i) { return h(
                     'line', {
@@ -84,6 +128,7 @@
                       y1: 0,
                       y2: i % 2 ? 20 : 10,
                       stroke: 'black',
+                      key: i,
                     }
                   )})
                 ),
@@ -92,6 +137,8 @@
                   {
                     transitionName: 'event',
                     transitionAppear: true,
+                    transitionAppearTimeout: 0,
+                    transitionEnterTimeout: 0,
                     transitionLeaveTimeout: 1,
                     component: 'g',
                     key: i,
@@ -115,26 +162,33 @@
               document.getElementById('one')
             )
           })
+          Rx.Observable.merge(inputed$).subscribeOnCompleted(function () {
+            setTimeout(setAnimation, 100, false)
+          })
+      }
+
+      for (var input of Array.from(document.querySelectorAll('input[id$="$"]'))) {
+        const paramName = input.id.replace('$', '')
+        const inputParam = location.search.match(new RegExp(`\\W${paramName}=([^&]+)`))
+        if (inputParam && inputParam[1]) { input.value = decodeURIComponent(inputParam[1]) }
       }
 
       updateSVG()
-      document.getElementById('args').onsubmit = function (e) { updateSVG() }
-      document.getElementById('add').onclick = function (e) {
-        const existingInputs = document.querySelectorAll('input[id$="$"]').length
+      document.getElementById('args').onsubmit = function (e) { setAnimation(true); updateSVG() }
+      document.getElementById('play-pause').onclick = function () { setAnimation(document.getElementById('one').classList.contains('paused')) }
+      pauseUpdate$.subscribe(function (newPlayStatus) {
+        const button = document.getElementById('play-pause')
 
-        if (existingInputs === STREAM_COLORS.length) { return }
-        else if (existingInputs === STREAM_COLORS.length - 1) { e.target.remove() }
-
-        const div = document.createElement('div')
-        const input = document.createElement('input')
-        div.textContent = STREAM_COLORS[existingInputs] + '$ = '
-        input.id = input.name = STREAM_COLORS[existingInputs] + '$'
-        input.type = 'text'
-        input.size = 40
-        input.value = STREAM_VALUES[parseInt(Math.random() * STREAM_VALUES.length)]
-
-        document.getElementById('fields').appendChild(div).appendChild(input)
-      }
+        if (newPlayStatus) {
+          document.getElementById('one').classList.remove('paused')
+          button.classList.add('pause')
+          button.classList.remove('play')
+        } else {
+          document.getElementById('one').classList.add('paused')
+          button.classList.add('play')
+          button.classList.remove('pause')
+        }
+      })
     })();
   </script>
 </body>
