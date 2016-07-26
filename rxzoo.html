@@ -2,35 +2,38 @@
 <html>
 <head>
   <title>Rx Zoo</title>
+  <meta charset="utf-8" />
   <link rel="stylesheet" href="https://npmcdn.com/hack@0.5.1" />
   <style type="text/css">
     @keyframes timeline-flow {
       from { transform: translateX(0) }
-      to { transform: translateX(-40px) }
+      to { transform: translateX(-64px) }
     }
 
     .timeline { animation: timeline-flow linear 1s infinite; }
 
     @keyframes event-flow {
       from { transform: translateX(0) }
-      to { transform: translateX(-400px) }
+      to { transform: translateX(-960px) }
     }
 
-    .event-enter, .event-appear { animation: event-flow linear 10s; }
+    .event-enter, .event-appear { animation: event-flow linear 15s; }
+
+    #one { width: 100vw; max-width: 800px; }
 
     #one.paused .timeline, #one.paused .event-enter, #one.paused .event-appear {
       animation-play-state: paused;
     }
 
     #play-pause { font-size: 5em }
-    #play-pause.pause::before { content: "⏸" }
-    #play-pause.play::before { content: "▶️" }
+    #play-pause.pause::after { content: "⏸" }
+    #play-pause.play::after { content: "▶️" }
   </style>
 </head>
 <body>
   <a href="https://gist.github.com/zemlanin/ce68944400c26ca864fdcd256a86ad04">source</a>
-  <div id="one"></div>
-  <div id="play-pause" class="pause"></div>
+  <div id="one"></div><br/>
+  <div id="play-pause" class="pause"></div><br/>
   <form id="args" action="javascript:void 0">
     <div id="fields">
       <div>
@@ -69,9 +72,7 @@
         'black$.take(3)',
         'black$.skip(3)',
         'black$.takeUntil(red$.skip(3))',
-
-        'click$.map(function(v, i){ return i % 2 }).startWith(true)',
-        'black$.controlled().stopAndWait(red$.filter(Boolean))',
+        'black$.share()',
         'black$.pausable(red$)',
       ]
       const h = React.createElement
@@ -84,11 +85,13 @@
       function argsToArray () { return Array.from(arguments) }
       function startWithNull (s) { return s.startWith(null) }
       function setAnimation (newPlayStatus) { pauseUpdate$.onNext(newPlayStatus) }
+      function timerStream (v) { return Rx.Observable.timer(14000).map(null).startWith(v) }
 
       const click$ = (
         Rx.Observable.fromEvent(document.getElementById('click$button'), 'click')
         .map('ok')
         .map(mapToDisplay)
+        .flatMapLatest(timerStream)
       )
 
       function updateSVG () {
@@ -103,6 +106,7 @@
             inputed$.push(
               eval(`var ${input.id} = ${input.value}; ${input.id}`)
                 .map(mapToDisplay)
+                .flatMapLatest(timerStream)
             )
             queryParams.push(`${input.id.replace('$', '')}=${encodeURIComponent(input.value)}`)
           }
@@ -118,19 +122,37 @@
           .withLatestFrom(pauseUpdate$.startWith(true), function(b, r) {return r && b})
           .filter(Boolean)
           .subscribe(function (values) {
+            const svgHeight = 50 + values.length * 50
+            const svgWidth = document.getElementById('one').clientWidth
+
             ReactDOM.render(
-              h('svg', {height: 30 + values.length * 50},
+              h('svg',
+                {
+                  height: svgHeight,
+                  width: svgWidth,
+                  viewBox: `0 0 ${svgWidth} ${svgHeight}`,
+                },
                 h('g', {className: 'timeline'},
-                  Array.from({length: 20}, function (v, i) { return h(
-                    'line', {
-                      x1: i * 20 - 10,
-                      x2: i * 20 - 10,
-                      y1: 0,
-                      y2: i % 2 ? 20 : 10,
-                      stroke: 'black',
-                      key: i,
-                    }
-                  )})
+                  Array.from({length: parseInt(svgWidth / 32) + 2}, function (v, i) {
+                    return [
+                      h('line', {
+                        x1: svgWidth - ((i - 2) * 32),
+                        x2: svgWidth - ((i - 2) * 32),
+                        y1: 0,
+                        y2: i % 2 ? 20 : 10,
+                        stroke: 'black',
+                        key: `${i}top`,
+                      }),
+                      h('line', {
+                        x1: svgWidth - ((i - 2) * 32),
+                        x2: svgWidth - ((i - 2) * 32),
+                        y1: svgHeight,
+                        y2: i % 2 ? svgHeight - 20 : svgHeight - 10,
+                        stroke: 'black',
+                        key: `${i}bottom`,
+                      })
+                    ]
+                  })
                 ),
                 values.map(function (v, i) { return v && h(
                   React.addons.CSSTransitionGroup,
@@ -145,16 +167,17 @@
                   },
                   h('g', {key: `${v.v}.${v.t}`},
                     h('circle', {
-                      cx: 250,
+                      cx: svgWidth - 40,
                       cy: 50 + i * 50,
                       fill: STREAM_COLORS[i],
-                      r: 15,
+                      r: 16,
                     }),
                     h('text', {
-                      x: 250,
-                      y: 55 + i * 50,
+                      x: svgWidth - 40,
+                      y: 50 + i * 50,
                       fill: textColor,
                       textAnchor: 'middle',
+                      dominantBaseline: 'central',
                     }, v.v)
                   ))
                 })
