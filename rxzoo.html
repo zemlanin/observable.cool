@@ -96,7 +96,7 @@
         })
       }
       function setAnimation (newPlayStatus) { pauseUpdate$.onNext(newPlayStatus) }
-      function renderValueGroup (v, i, svgWidth) {
+      function renderValueGroup (v, i) {
         return h(
           React.addons.CSSTransitionGroup,
           {
@@ -114,14 +114,14 @@
             {key: `${v.value}.${v.timestamp}`},
             h('circle', {
               // initial render outside viewbox because of blinking in #blink browsers
-              cx: svgWidth + 60,
+              cx: 860,
               cy: 50 + i * 50,
               fill: STREAM_COLORS[i],
               r: 16,
             }),
             h('text', {
               // initial render outside viewbox because of blinking in #blink browsers
-              x: svgWidth + 60,
+              x: 860,
               y: 50 + i * 50,
               fill: 'white',
               textAnchor: 'middle',
@@ -132,8 +132,7 @@
       }
 
       const click$ = (
-        Rx.Observable.fromEvent(document.getElementById('click$button'), 'click')
-        .map('ok')
+        Rx.Observable.fromEvent(document.getElementById('click$button'), 'click').map('ok')
       )
 
       function updateSVG () {
@@ -156,28 +155,27 @@
         }
 
         history.replaceState('', null, `?${queryParams.join('&')}`)
-        const svgHeight = (inputed$.length + 2) * 50
-        const ticksArray = Array.from({length: 27})
-        const getTimelineTicks = function getTimelineTicks(i, svgWidth) {
+        const svgHeight = (inputed$.length + static$.length + 1) * 50
+        const ticksArray = Array.from({length: 27}, function (v, i) {
           return [
               h('line', {
-                x1: svgWidth - ((i - 2) * 32),
-                x2: svgWidth - ((i - 2) * 32),
+                x1: 864 - (i * 32),
+                x2: 864 - (i * 32),
                 y1: 0,
                 y2: i % 2 ? 20 : 10,
                 stroke: 'black',
                 key: `${i}top`,
               }),
               h('line', {
-                x1: svgWidth - ((i - 2) * 32),
-                x2: svgWidth - ((i - 2) * 32),
+                x1: 864 - (i * 32),
+                x2: 864 - (i * 32),
                 y1: svgHeight,
                 y2: i % 2 ? svgHeight - 20 : svgHeight - 10,
                 stroke: 'black',
                 key: `${i}bottom`,
               })
             ]
-        }
+        })
 
         disposable.dispose()
         disposable = Rx.Observable.merge(
@@ -193,12 +191,10 @@
                 {
                   height: svgHeight,
                   width: svgWidth,
-                  viewBox: `0 0 ${svgWidth} ${svgHeight}`,
+                  viewBox: `${800 - svgWidth} 0 ${svgWidth} ${svgHeight}`,
                 },
-                h('g', {className: 'timeline'},
-                  ticksArray.map(function(v, i) { return getTimelineTicks(i, svgWidth) })
-                ),
-                values.map(function(v, i) { return renderValueGroup(v, i, svgWidth) })
+                h('g', {className: 'timeline'}, ticksArray),
+                values.map(renderValueGroup)
               ),
               document.getElementById('one')
             )
