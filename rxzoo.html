@@ -25,7 +25,8 @@
 
     .event-enter, .event-appear { animation: event-flow linear 13s; }
 
-    #one { width: 100vw; max-width: 800px; }
+    #one, #args { width: 100vw; max-width: 800px; }
+    #args { font-size: 2em; }
 
     #one.paused .timeline, #one.paused .event-enter, #one.paused .event-appear {
       animation-play-state: paused;
@@ -42,14 +43,14 @@
     }
 
     #args table td {
+      max-width: 100vw;
       border: none;
       vertical-align: middle;
     }
     #args table tr td:first-child {
-        width: 1%;
-        white-space: nowrap;
+      width: 1%;
+      white-space: nowrap;
     }
-    #args { width: 800px; }
 
     #play-pause { font-size: 3em }
     #play-pause.pause::after { content: "⏸" }
@@ -77,6 +78,13 @@
         float: right;
       }
     }
+
+    @media(max-width: 800px) {
+      #args { font-size: 1.2em; }
+      #args td {
+        display: block;
+      }
+    }
   </style>
 </head>
 <body>
@@ -88,7 +96,7 @@
         source
       </a>
     </div>
-    <form id="args" action="javascript:void 0" style="font-size: 2em;">
+    <form id="args" action="javascript:void 0">
       <table>
         <tr>
           <td>
