@@ -5,6 +5,11 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://npmcdn.com/hack@0.5.1" />
   <style type="text/css">
+    body {
+      margin: 1em auto;
+      width: 100vw;
+      max-width: 800px;
+    }
     @keyframes timeline-flow {
       from { transform: translateX(0) }
       to { transform: translateX(-64px) }
@@ -26,44 +31,118 @@
       animation-play-state: paused;
     }
 
+    #args table span {
+      display: block;
+      text-align: right;
+    }
+
+    #args table {
+      border: none;
+      vertical-align: middle;
+    }
+
+    #args table td {
+      border: none;
+      vertical-align: middle;
+    }
+    #args table tr td:first-child {
+        width: 1%;
+        white-space: nowrap;
+    }
+    #args { width: 800px; }
+
     #play-pause { font-size: 3em }
     #play-pause.pause::after { content: "⏸" }
     #play-pause.play::after { content: "▶️" }
-    input { font-family: Menlo, Monaco, "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace, serif }
+    input, button {
+      font-family: Menlo, Monaco, "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace, serif;
+      font-size: 1em;
+    }
+    input {
+      width: 100%;
+    }
+    #spacebar\$button.pressed, #spacebar\$button:active {
+      transform: translateY(0.4em);
+      color: none;
+    }
+
+    @media(min-width: 1650px) {
+      body {
+        margin: 10em auto;
+        max-width: 1650px;
+      }
+      #render-col { float: left; }
+      #args {
+        width: 800px;
+        float: right;
+      }
+    }
   </style>
 </head>
 <body>
-  <a href="https://gist.github.com/zemlanin/ce68944400c26ca864fdcd256a86ad04">source</a>
-  <div id="one"></div><br/>
-  <div id="play-pause" class="pause"></div><br/>
-  <form id="args" action="javascript:void 0">
-    <div id="fields">
-      <div>
-        <span style="color: gray">click$</span> = <input id="click$button" type="button" value="ok" />
-      </div>
-      <div>
-        <span style="color: black">black$ =</span>
-        <input id='black$' type="text" value="Rx.Observable.timer(0, 1000)" size="40" />
-      </div>
-      <div>
-        <span style="color: red">red$ =</span>
-        <input id='red$' type="text" value="black$.filter(function(v) { return v % 3 })" size="40" />
-      </div>
-      <div>
-        <span style="color: blue">blue$ =</span>
-        <input id='blue$' type="text" size="40" />
-      </div>
-      <div>
-        <span style="color: green">green$ =</span>
-        <input id='green$' type="text" size="40" />
-      </div>
-      <div>
-        <span style="color: purple">purple$ =</span>
-        <input id='purple$' type="text" size="40" />
-      </div>
+  <div id="wrapper">
+    <div id="render-col">
+      <div id="one"></div><br/>
+      <span id="play-pause" class="pause"></span>
+      <a href="https://gist.github.com/zemlanin/ce68944400c26ca864fdcd256a86ad04">
+        source
+      </a>
     </div>
-    <input type="submit" />
-  </form>
+    <form id="args" action="javascript:void 0" style="font-size: 2em;">
+      <table>
+        <tr>
+          <td>
+            <span style="color: gray">gray$ = </span>
+          </td>
+          <td>
+            <button id="click$button" type="button">ok</button>
+            <button id="spacebar$button" type="button">spacebar</button>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span style="color: black">black$ =</span>
+          </td>
+          <td>
+            <input id='black$' type="text" value="Rx.Observable.timer(0, 1000)" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span style="color: red">red$ =</span>
+          </td>
+          <td>
+            <input id='red$' type="text" value="black$.filter(function(v) { return v % 3 })" />
+          </td>
+        </div>
+        <tr>
+          <td>
+            <span style="color: blue">blue$ =</span>
+          </td>
+          <td>
+            <input id='blue$' type="text" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span style="color: green">green$ =</span>
+          </td>
+          <td>
+            <input id='green$' type="text" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <span style="color: purple">purple$ =</span>
+          </td>
+          <td>
+            <input id='purple$' type="text" />
+          </td>
+        </tr>
+      </table>
+      <input type="submit" />
+    </form>
+  </div>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/4.1.0/rx.all.min.js"></script>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/react/15.2.1/react-with-addons.min.js"></script>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/react/15.2.1/react-dom.min.js"></script>
@@ -86,7 +165,6 @@
 
       var disposable = {dispose: function () {}}
 
-      function markWithTimestamp (v) { return {v: v, t: (new Date).getTime()} }
       function wrapToDisplay (s, i, arr) {
         const length = arr.length
         return s.timestamp().map(function (v) {
@@ -115,14 +193,14 @@
             h('circle', {
               // initial render outside viewbox because of blinking in #blink browsers
               cx: 860,
-              cy: 50 + i * 50,
+              cy: 45 + i * 50,
               fill: STREAM_COLORS[i],
               r: 16,
             }),
             h('text', {
               // initial render outside viewbox because of blinking in #blink browsers
               x: 860,
-              y: 50 + i * 50,
+              y: 45 + i * 50,
               fill: 'white',
               textAnchor: 'middle',
               dominantBaseline: 'central',
@@ -131,12 +209,26 @@
         )
       }
 
-      const click$ = (
-        Rx.Observable.fromEvent(document.getElementById('click$button'), 'click').map('ok')
+      const click$ = Rx.Observable.fromEvent(document.getElementById('click$button'), 'click').map('ok')
+      const spacebar$ = Rx.Observable.merge(
+        Rx.Observable.fromEvent(document.body, 'keyup'),
+        Rx.Observable.fromEvent(document.body, 'keydown')
       )
+        .map(function (e) {
+          return e.target == document.body && e.keyCode == 32 ? e.type : null
+        })
+        .filter(Boolean)
+        .map(function (type) { return {keyup: 'up', keydown: 'down'}[type] || type })
+        .merge(
+          Rx.Observable.fromEvent(document.getElementById('spacebar$button'), 'mouseup').map('up')
+        )
+        .merge(
+          Rx.Observable.fromEvent(document.getElementById('spacebar$button'), 'mousedown').map('down')
+        )
+        .distinctUntilChanged()
 
       function updateSVG () {
-        const static$ = [click$]
+        const static$ = [click$.merge(spacebar$)]
 
         const inputed$ = []
         const queryParams = []
@@ -224,6 +316,13 @@
           document.getElementById('one').classList.add('paused')
           button.classList.add('play')
           button.classList.remove('pause')
+        }
+      })
+      spacebar$.subscribe(function (value) {
+        if (value == 'down') {
+          document.getElementById('spacebar$button').classList.add('pressed')
+        } else {
+          document.getElementById('spacebar$button').classList.remove('pressed')
         }
       })
     })();
