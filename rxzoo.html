@@ -157,7 +157,6 @@
 
   <script type="text/javascript">
     (function () {
-      const TEXT_COLORS = ['yellow', 'pink', 'orange', 'gray']
       const STREAM_COLORS = ['gray', 'black', 'red', 'blue', 'green', 'purple']
       const STREAM_VALUES = [
         'red$.map(function(v, i) { return i } )',
@@ -223,7 +222,9 @@
         Rx.Observable.fromEvent(document.body, 'keydown')
       )
         .map(function (e) {
-          return e.target == document.body && e.keyCode == 32 ? e.type : null
+          return e.target == document.body && e.keyCode == 32
+            ? (e.preventDefault(), e.type)
+            : null
         })
         .filter(Boolean)
         .map(function (type) { return {keyup: 'up', keydown: 'down'}[type] || type })
@@ -236,7 +237,10 @@
         .distinctUntilChanged()
 
       function updateSVG () {
-        const static$ = [click$.merge(spacebar$)]
+        const gray$ = click$.merge(spacebar$).share()
+        const grey$ = gray$
+
+        const static$ = [gray$]
 
         const inputed$ = []
         const queryParams = []
