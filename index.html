@@ -41,7 +41,7 @@
 
     .event-enter, .event-appear { animation: event-flow linear 13s; }
 
-    #one, #args { width: 100vw; max-width: 800px; }
+    #one, #args, footer { width: 100vw; max-width: 800px; }
     #one { font-size: 0.75em; }
 
     #one.paused .timeline, #one.paused .event-enter, #one.paused .event-appear {
@@ -93,33 +93,37 @@
       color: none;
     }
 
-    @media(min-width: 1650px) {
-      body {
-        margin: 10em auto;
-        max-width: 1650px;
-      }
-      #render-col { float: left; }
-      #args {
-        width: 800px;
-        float: right;
-      }
-    }
-
-    @media(max-width: 800px) {
-      #args { font-size: 1.2em; }
-      #args td { display: block; }
-    }
-
     footer {
       text-align: center;
     }
 
     footer ul {
       list-style: none;
+      padding-left: 0;
     }
 
-    footer ul li {
-      display: inline;
+    footer ul li { display: inline; }
+
+    #see-also { display: inline; }
+
+    @media(min-width: 1650px) {
+      body {
+        margin: 8em auto;
+        max-width: 1650px;
+      }
+      #render-col { float: left; }
+      #args, footer {
+        width: 800px;
+        float: right;
+      }
+    }
+
+    @media(max-width: 800px) {
+      h1 { font-size: 1.5em; }
+      #args { font-size: 1.2em; }
+      #args td { display: block; }
+      footer ul { display: block; }
+      #see-also { display: block; }
     }
   </style>
 </head>
@@ -195,8 +199,8 @@
       </table>
     </form>
     <footer>
-      <ul>
-        <span>see also:</span>
+      <span>see also:</span>
+      <ul id="see-also">
         <li>
           <a href="https://reactivex.io/" target="_blank">reactivex.io</a>
         </li>
