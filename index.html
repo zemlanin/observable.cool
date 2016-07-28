@@ -9,7 +9,23 @@
       margin: 1em auto;
       width: 100vw;
       max-width: 800px;
+      font-size: 2em;
     }
+
+    a {
+      color: #00a500;
+      text-decoration: none;
+      border: none;
+    }
+
+    a:hover {
+      background-color: #00a500;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
     @keyframes timeline-flow {
       from { transform: translateX(0) }
       to { transform: translateX(-64px) }
@@ -26,7 +42,7 @@
     .event-enter, .event-appear { animation: event-flow linear 13s; }
 
     #one, #args { width: 100vw; max-width: 800px; }
-    #args { font-size: 2em; }
+    #one { font-size: 0.75em; }
 
     #one.paused .timeline, #one.paused .event-enter, #one.paused .event-appear {
       animation-play-state: paused;
@@ -52,16 +68,26 @@
       white-space: nowrap;
     }
 
-    #play-pause { font-size: 3em }
+    #one-controls {
+      text-align: center;
+      margin: 0.5em 0;
+      font-size: 3em;
+    }
+
+    #play-pause, #share {
+      cursor: pointer;
+      margin: 0 auto;
+    }
+    #share:hover {
+      background-color: revert;
+    }
     #play-pause.pause::after { content: "⏸" }
     #play-pause.play::after { content: "▶️" }
     input, button {
       font-family: Menlo, Monaco, "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace, serif;
       font-size: 1em;
     }
-    input {
-      width: 100%;
-    }
+    input { width: 100%; }
     #spacebar\$button.pressed, #spacebar\$button:active {
       transform: translateY(0.4em);
       color: none;
@@ -81,20 +107,33 @@
 
     @media(max-width: 800px) {
       #args { font-size: 1.2em; }
-      #args td {
-        display: block;
-      }
+      #args td { display: block; }
+    }
+
+    footer {
+      text-align: center;
+    }
+
+    footer ul {
+      list-style: none;
+    }
+
+    footer ul li {
+      display: inline;
     }
   </style>
 </head>
 <body>
   <div id="wrapper">
     <div id="render-col">
-      <div id="one"></div><br/>
-      <span id="play-pause" class="pause"></span>
-      <a href="https://github.com/zemlanin/observable.cool">
-        source
-      </a>
+      <h1>
+        <a href="http://observable.cool">observable.cool</a>
+      </h1>
+      <div id="one"></div>
+      <div id="one-controls">
+        <span id="play-pause" class="pause"></span>
+        <a id="share" href="http://observable.cool">🔗</a>
+      </div>
     </div>
     <form id="args" action="javascript:void 0">
       <table>
@@ -133,7 +172,7 @@
         </tr>
         <tr>
           <td>
-            <span style="color: green">green$ =</span>
+            <span style="color: #00a500">green$ =</span>
           </td>
           <td>
             <input id='green$' type="text" />
@@ -147,9 +186,41 @@
             <input id='purple$' type="text" />
           </td>
         </tr>
+        <tr>
+          <td></td>
+          <td style="text-align: center;">
+            <button type="submit">update</button>
+          </td>
+        </tr>
       </table>
-      <input type="submit" />
     </form>
+    <footer>
+      <ul>
+        <span>see also:</span>
+        <li>
+          <a href="https://reactivex.io/" target="_blank">reactivex.io</a>
+        </li>
+        <span>/</span>
+        <li>
+          <a href="http://rxmarbles.com" target="_blank">rxmarbles</a>
+        </li>
+        <span>/</span>
+        <li>
+          <a href="https://xgrommx.github.io/rx-book/" target="_blank">rx book</a>
+        </li>
+      </ul>
+      <ul>
+        <li>
+          <a href="https://anton.codes/" target="_blank">@zemlanin</a>
+        </li>
+        <span>/</span>
+        <li>
+          <a href="https://github.com/zemlanin/observable.cool" target="_blank">
+            source
+          </a>
+        </li>
+      </ul>
+    </footer>
   </div>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/4.1.0/rx.all.min.js"></script>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/react/15.2.1/react-with-addons.min.js"></script>
@@ -157,7 +228,7 @@
 
   <script type="text/javascript">
     (function () {
-      const STREAM_COLORS = ['gray', 'black', 'red', 'blue', 'green', 'purple']
+      const STREAM_COLORS = ['gray', 'black', 'red', 'blue', '#00a500', 'purple']
       const STREAM_VALUES = [
         'red$.map(function(v, i) { return i } )',
         'red$.debounce(1500)',
@@ -202,7 +273,7 @@
               cx: 860,
               cy: 45 + i * 50,
               fill: STREAM_COLORS[i],
-              r: 16,
+              r: '1.2em',
             }),
             h('text', {
               // initial render outside viewbox because of blinking in #blink browsers
@@ -259,6 +330,7 @@
         }
 
         history.replaceState('', null, `?${queryParams.join('&')}`)
+        document.getElementById('share').href = location.href
         const svgHeight = (inputed$.length + static$.length + 1) * 50
         const ticksArray = Array.from({length: 27}, function (v, i) {
           return [
