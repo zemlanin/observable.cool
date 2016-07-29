@@ -167,7 +167,7 @@
             <span style="color: black">black$ =</span>
           </td>
           <td>
-            <input id='black$' type="text" value="Rx.Observable.timer(0, 1000)" />
+            <input id='black$' type="text" />
           </td>
         </tr>
         <tr>
@@ -175,7 +175,7 @@
             <span style="color: red">red$ =</span>
           </td>
           <td>
-            <input id='red$' type="text" value="black$.filter(function(v) { return v % 3 })" />
+            <input id='red$' type="text" />
           </td>
         </div>
         <tr>
@@ -245,19 +245,15 @@
   <script type="text/javascript">
     (function () {
       const STREAM_COLORS = ['gray', 'black', 'red', 'blue', '#00a500', 'purple']
-      const STREAM_VALUES = [
-        'red$.map(function(v, i) { return i } )',
-        'red$.debounce(1500)',
-        'black$.take(3)',
-        'black$.skip(3)',
-        'black$.takeUntil(red$.skip(3))',
-        'black$.share()',
-        'black$.pausable(red$)',
-      ]
+      const DEFAULT_VALUES = {
+        'black': 'Rx.Observable.timer(0, 1000)',
+        'red': 'black$.filter(function(v) { return v % 3 })',
+      }
       const h = React.createElement
       const pauseUpdate$ = new Rx.Subject()
 
-      var disposable = {dispose: function () {}}
+      var disposableRender = {dispose: function () {}}
+      var disposablePause = {dispose: function () {}}
 
       function wrapToDisplay (s, i, arr) {
         const length = arr.length
@@ -269,6 +265,26 @@
       }
       function setAnimation (newPlayStatus) { pauseUpdate$.onNext(newPlayStatus) }
       function renderValueGroup (v, i) {
+        var renderValue
+
+        if (!v) {
+          renderValue = 'null'
+        } else if (v.value == null) {
+          renderValue = 'null'
+        } else if (typeof v.value == 'string' || typeof v.value == 'number') {
+          renderValue = v.value
+        } else if (v.value instanceof Array) {
+          renderValue = '[]'
+        } else if (typeof v.value == 'function') {
+          renderValue = 'f()'
+        } else if (v.value === true || v.value === false) {
+          renderValue = v.value ? 'T' : 'F'
+        } else if (v.value instanceof Rx.Observable) {
+          renderValue = '•••'
+        } else if (typeof v.value == 'object') {
+          renderValue = '{}'
+        }
+
         return h(
           React.addons.CSSTransitionGroup,
           {
@@ -283,7 +299,7 @@
           },
           v && h(
             'g',
-            {key: `${v.value}.${v.timestamp}`},
+            {key: `${renderValue}.${v.timestamp}`},
             h('circle', {
               // initial render outside viewbox because of blinking in #blink browsers
               cx: 860,
@@ -298,7 +314,7 @@
               fill: 'white',
               textAnchor: 'middle',
               dominantBaseline: 'central',
-            }, v.value)
+            }, renderValue)
           )
         )
       }
@@ -327,21 +343,21 @@
         const gray$ = click$.merge(spacebar$).share()
         const grey$ = gray$
 
-        const static$ = [gray$]
+        const static$ = [gray$.share()]
 
         const inputed$ = []
+        var haveAnyInput = false
         const queryParams = []
 
         for (var input of Array.from(document.querySelectorAll('input[id$="$"]'))) {
           if (input.value) {
-            inputed$.push(
-              eval(`var ${input.id} = ${input.value}; ${input.id}`)
-            )
+            eval(`var ${input.id} = ${input.value}`)
+            inputed$.push(eval(`${input.id}.share()`))
             queryParams.push(`${input.id.replace('$', '')}=${encodeURIComponent(input.value)}`)
+            haveAnyInput = true
           } else {
-            inputed$.push(
-              eval(`var ${input.id} = Rx.Observable.empty(); ${input.id}`)
-            )
+            eval(`var ${input.id} = Rx.Observable.empty()`)
+            inputed$.push(eval(`${input.id}.share()`))
           }
         }
 
@@ -369,10 +385,11 @@
             ]
         })
 
-        disposable.dispose()
-        disposable = Rx.Observable.merge(
+        disposableRender.dispose()
+        disposableRender = Rx.Observable.merge(
           static$.concat(inputed$).map(wrapToDisplay)
         )
+          .startWith([])
           .withLatestFrom(pauseUpdate$.startWith(true), function(b, r) {return r && b})
           .filter(Boolean)
           .subscribe(function (values) {
@@ -391,15 +408,26 @@
               document.getElementById('one')
             )
           })
-          Rx.Observable.merge(inputed$).subscribeOnCompleted(function () {
-            setTimeout(setAnimation, 100, false)
-          })
+
+        disposablePause.dispose()
+        if (haveAnyInput) {
+          disposablePause = Rx.Observable.merge(inputed$)
+            .subscribeOnCompleted(function () {
+              setTimeout(setAnimation, 100, false)
+            })
+        } else {
+          disposablePause = {dispose: function () {}}
+        }
       }
 
       for (var input of Array.from(document.querySelectorAll('input[id$="$"]'))) {
         const paramName = input.id.replace('$', '')
         const inputParam = location.search.match(new RegExp(`\\W${paramName}=([^&]+)`))
-        if (inputParam && inputParam[1]) { input.value = decodeURIComponent(inputParam[1]) }
+        if (inputParam && inputParam[1]) {
+          input.value = decodeURIComponent(inputParam[1])
+        } else if (!location.search && DEFAULT_VALUES[paramName]) {
+          input.value = DEFAULT_VALUES[paramName]
+        }
       }
 
       updateSVG()
