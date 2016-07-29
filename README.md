@@ -8,10 +8,10 @@
 - [.filter()](http://observable.cool/?black=gray%24.filter(function(v%2Ci)%7B%20return%20v%20%3D%3D%20'ok'%20%7D)&red=gray%24.filter(function(v%2Ci)%7B%20return%20(i%20%25%204)%20%3D%3D%200%20%7D))
 - [.filter().map()](http://observable.cool/?black=gray%24.filter(function(v%2Ci)%7B%20return%20v%20%3D%3D%20'ok'%20%7D)&red=black%24.map(function()%7B%20return%20'fine'%20%7D))
 - [.pluck()](http://observable.cool/?black=gray%24.timeInterval()&blue=black%24.pluck('interval')&green=black%24.pluck('value'))
-[Rx.Observable.timer()](http://observable.cool/?black=Rx.Observable.timer(0%2C%201000))
+- [Rx.Observable.timer()](http://observable.cool/?black=Rx.Observable.timer(0%2C%201000))
 - [.pausable()](http://observable.cool/?black=gray%24.map(function%20(v)%20%7B%20return%20v%20%3D%3D%20'up'%20%7D)&red=Rx.Observable.timer(0%2C%201000)&blue=red%24.pausable(black%24))
-- [.takeUntil() / .skipUntil()]
-- [.takeWhile() / .skipWhile()]
+- [.takeUntil() / .skipUntil()] // TODO
+- [.takeWhile() / .skipWhile()] // TODO
 - [.startWith()](http://observable.cool/?black=gray%24.map(function%20(v)%20%7B%20return%20v%20%3D%3D%20'up'%20%7D)&red=Rx.Observable.timer(0%2C%201000)&blue=red%24.pausable(black%24)&green=red%24.pausable(black%24.startWith(true)))
 - [.share()](http://observable.cool/?black=gray%24.map(function%20(v)%20%7B%20return%20v%20%3D%3D%20'up'%20%7D)&red=Rx.Observable.timer(0%2C%201000).take(10)&blue=red%24.share()&green=red%24.pausable(black%24)&purple=blue%24.pausable(black%24))
 - [.scan()](http://observable.cool/?black=gray%24.pluck('length')&red=black%24.scan(function(acc%2C%20v)%7Breturn%20acc%2Bv%7D%2C%200))
