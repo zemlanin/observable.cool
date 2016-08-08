@@ -120,7 +120,7 @@
 
     @media(min-width: 1650px) {
       body {
-        margin: 8em auto;
+        margin: 12vh auto;
         max-width: 1650px;
       }
       #render-col { float: left; }
@@ -442,12 +442,9 @@
           const inputParam = location.search.match(new RegExp(`\\W${paramName}=([^&]+)`))
           if (inputParam && inputParam[1]) {
             input.value = decodeURIComponent(inputParam[1])
-          } else if (!location.search && DEFAULT_VALUES[paramName]) {
-            input.value = DEFAULT_VALUES[paramName]
           }
         }
       }
-
 
       updateSVG()
       document.getElementById('args').onsubmit = function (e) { setAnimation(true); updateSVG() }
